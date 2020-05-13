@@ -3,12 +3,13 @@ function new-M365Site {
     #Retrieve the top level site from the user.
     $tenantURL = Read-Host "Please Provide the Tenant/Admin Site URL"
 
-    #Retrieve the site url the user wants to provision
+    #Retrieve the site url the user wants to provision.
     $url = Read-Host "Please enter the SPO URL for the site being created"
 
-     #Retrieve the site title from User
+    #Retrieve the site title from User.
     $title = Read-Host "Please enter the title of the new site"
 
+    #Retrieve the site owner e-mail from User.
     $owner = Read-Host "Please enter the site owner e-mail for this new site"
 
     # Connect to M365
@@ -31,7 +32,7 @@ function new-M365Site {
 
     write-host "Attempting to create site: $($title)" -foregroundcolor green
     if (($null -eq $siteExists) -and ( $null -eq $isSiteInRBin)) {
-        New-SPOSite -Url $url -Owner $owner -StorageQuota 1000 -Title $title
+        New-SPOSite -Url $url -Owner $owner -StorageQuota 100 -Title $title -Template "PROJECTSITE#0"
         write-host "$($teamSiteUrl) created!" -foregroundcolor green
     }
     elseif ($siteExists -eq $true) {
