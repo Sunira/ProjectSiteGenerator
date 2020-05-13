@@ -9,15 +9,6 @@ function new-M365Site {
     #Store Credentials for Use
     $cred = Get-Credential -UserName $username -Message "You will now be asked for Password."
 
-    #Retrieve the site title from User
-    $title = Read-Host "Please enter the title of the new site"
-
-    #Retrieve the site title from User
-    $desc = Read-Host "Please enter the site description of the new site"
-
-    #Retrieve the site alias ( site.sharepoint.com/sites/*alias* ) from User
-    $alias = Read-Host "Please enter the site alias of the new site. example: ...com/sites/your-alias"
-
     # Connect to M365
     try {
         Connect-PnPOnline $tenantURL -Credentials $cred 
@@ -28,20 +19,40 @@ function new-M365Site {
         Break new-M365Site
     }
 
+    #Retrieve the site title from User
+    $title = Read-Host "Please enter the title of the new site"
+
+    #Retrieve the site title from User
+    $desc = Read-Host "Please enter the site description of the new site"
+
+    #Retrieve the site alias ( site.sharepoint.com/sites/*alias* ) from User
+    $alias = Read-Host "Please enter the site alias of the new site. example: ...com/sites/your-alias"
 
     #Try to Create New Project Site!
     try {        
         write-host "Attempting to create site: $($title)" -foregroundcolor green
-        $teamSiteUrl = New-PnPSite -Type TeamSite -Title $title -Description $desc -Alias $alias
+        $teamSiteUrl = New-PnPSite -Type TeamSite -Title $title -Description $desc -Alias $alias -ErrorAction Stop
         write-host "Successfully Created: $($teamSiteUrl) ! " -foregroundcolor green
     }
     catch {
         write-host "Failed to create new site: $($Title)." -foregroundcolor red
+        $errorMessage = $_.ErrorDetails.Message
+        write-host "Error: $($errorMessage)" -foregroundcolor red
+        Break new-M365Site
+    }
+    
+
+    
+    
+    # Since we are connecting now to SP side, credentials will be asked
+    try {        
+        Connect-PnPOnline $teamSiteUrl -Credentials $cred 
+    } catch {
+        write-host "Failed to connect to new site: $($Title)." -foregroundcolor red
         Break new-M365Site
     }
 
-    # Since we are connecting now to SP side, credentials will be asked
-    Connect-PnPOnline $teamSiteUrl -Credentials $cred 
+     
 
     #Get Context and Web
     $context = Get-PnPContext
@@ -61,87 +72,81 @@ function new-M365Site {
             Write-Host "Unable to provision Risk Content Type to add to Sites."
             Break new-M365Site
         }
-    }
 
-    $riskCT = Get-PnPContentType -Identity "Risk"
+        $riskCT = Get-PnPContentType -Identity "Risk"
 
-    #Risk Content Type - Add Columns Condition, Consequence, Mitigation
-    if ( $null -ne $riskCT ) {
+        #Risk Content Type - Add Columns Condition, Consequence, Mitigation
+        if ( $null -ne $riskCT ) {
 
-        Write-Host "Risk Content Type Exists!" -foregroundcolor yellow
+            Write-Host "Risk Content Type Exists Now!" -foregroundcolor yellow
 
-        try {
+            try {
+                Write-Host "Trying to add fields." -foregroundcolor yellow
+                
+                
+                # Check for Condition Field, Create if it doesn't exist
+                try { 
+                    $conditionField = Get-PnPField -Identity "Condition" -ErrorAction SilientlyContinue
+                } catch {
+                    Write-Host "No Condition field found." -foregroundcolor yellow
+                }
 
-            Write-Host "Trying to add fields." -foregroundcolor yellow
-            # Condition Field Operations
-            try { 
-                $conditionField = Get-PnPField -Identity "Condition" -ErrorAction SilientlyContinue
-            }
-            catch {
-                Write-Host "No Condition field found." -foregroundcolor yellow
-            }
-
-            if ( $null -eq $conditionField ) {
-                Write-Host "Attempting to create condition field." -foregroundcolor yellow
-                Add-PnPField -Type Text -InternalName "Condition" -DisplayName "Condition" -AddToDefaultView ; 
-                Write-Host "Condition Field created" -foregroundcolor green
-            }
-            else {
-                Write-Host "Condition Field already exists." -foregroundcolor yellow
-            }
+                if ( $null -eq $conditionField ) {
+                    Write-Host "Attempting to create condition field." -foregroundcolor yellow
+                    Add-PnPField -Type Text -InternalName "Condition" -DisplayName "Condition" -AddToDefaultView ; 
+                    Write-Host "Condition Field created" -foregroundcolor green
+                } else {
+                    Write-Host "Condition Field already exists." -foregroundcolor yellow
+                }
 
 
-            # Consequence Field Operations
-            try { 
-                $consequenceField = Get-PnPField -Identity "Consequence" -ErrorAction SilientlyContinue
-            }
-            catch {
-                Write-Host "No Condition field found." -foregroundcolor yellow
-            }
+                 # Check for Consequence Field, Create if it doesn't exist
+                try { 
+                    $consequenceField = Get-PnPField -Identity "Consequence" -ErrorAction SilientlyContinue
+                } catch {
+                    Write-Host "No Consequence field found." -foregroundcolor yellow
+                }
             
-            if ( $null -eq $consequenceField ) {
-                Write-Host "No Consequence field found, attempting to create." -foregroundcolor yellow
-                Add-PnPField -Type Text -InternalName "Consequence" -DisplayName "Consequence" -AddToDefaultView;
-                Write-Host "Consequence Field created" -foregroundcolor green
-            }
-            else {
-                Write-Host "Consequence Field already exists." -foregroundcolor yellow
-            }
+                if ( $null -eq $consequenceField ) {
+                    Write-Host "No Consequence field found, attempting to create." -foregroundcolor yellow
+                    Add-PnPField -Type Text -InternalName "Consequence" -DisplayName "Consequence" -AddToDefaultView;
+                    Write-Host "Consequence Field created" -foregroundcolor green
+                }
+                else {
+                    Write-Host "Consequence Field already exists." -foregroundcolor yellow
+                }
 
 
-            # Mitigation Field Operations
-            try { 
-                $mitigationField = Get-PnPField -Identity "Mitigation" -ErrorAction SilientlyContinue
+                # Check for Mitigation Field, Create if it doesn't exist
+                try { 
+                    $mitigationField = Get-PnPField -Identity "Mitigation" -ErrorAction SilientlyContinue
+                } catch {
+                    Write-Host "No Mitigation field found." -foregroundcolor yellow
+                }
+            
+                if ( $null -eq $mitigationField ) {
+                    Write-Host "No Mitigation field found, attempting to create." -foregroundcolor yellow
+                    Add-PnPField -Type Text -InternalName "Mitigation" -DisplayName "Mitigation" -AddToDefaultView;
+                    Write-Host "Mitigation Field created" -foregroundcolor green
+                } else {
+                    Write-Host "Mitigation Field already exists." -foregroundcolor yellow
+                }
+            }
+
+            catch {
+                Write-Host "Unable to create Condition, Consequence, or Mitigation fields. Check errors." -foregroundcolor yellow
+            }
+
+            # Risk Content Type Management
+            try {
+                Write-Host "Attempting to add fields to Risk Content Type." -foregroundcolor yellow
+                Add-PnPFieldToContentType -Field "Condition" -ContentType "Risk" 
+                Add-PnPFieldToContentType -Field "Consequence" -ContentType "Risk" 
+                Add-PnPFieldToContentType -Field "Mitigation" -ContentType "Risk" 
             }
             catch {
-                Write-Host "No Mitigation field found." -foregroundcolor yellow
+                Write-Host "Unable to add new fields to content type." -foregroundcolor yellow
             }
-            
-            if ( $null -eq $mitigationField ) {
-                Write-Host "No Mitigation field found, attempting to create." -foregroundcolor yellow
-                Add-PnPField -Type Text -InternalName "Mitigation" -DisplayName "Mitigation" -AddToDefaultView;
-                Write-Host "Mitigation Field created" -foregroundcolor green
-            }
-            else {
-                Write-Host "Mitigation Field already exists." -foregroundcolor yellow
-            }
-
-
-
-        }
-        catch {
-            Write-Host "Unable to create Condition, Consequence, or Mitigation fields. Check errors." -foregroundcolor yellow
-        }
-
-        # Risk Content Type Management
-        try {
-            Write-Host "Attempting to add fields to Risk Content Type." -foregroundcolor yellow
-            Add-PnPFieldToContentType -Field "Condition" -ContentType "Risk" 
-            Add-PnPFieldToContentType -Field "Consequence" -ContentType "Risk" 
-            Add-PnPFieldToContentType -Field "Mitigation" -ContentType "Risk" 
-        }
-        catch {
-            Write-Host "Unable to add new fields to content type." -foregroundcolor yellow
         }
 
         # Risk List Management
