@@ -41,9 +41,6 @@ function new-M365Site {
         Break new-M365Site
     }
     
-
-    
-    
     # Since we are connecting now to SP side, credentials will be asked
     try {        
         Connect-PnPOnline $teamSiteUrl -Credentials $cred 
@@ -51,12 +48,6 @@ function new-M365Site {
         write-host "Failed to connect to new site: $($Title)." -foregroundcolor red
         Break new-M365Site
     }
-
-     
-
-    #Get Context and Web
-    $context = Get-PnPContext
-    $web = Get-PnPWeb
 
     #Check for Risk Content Type
     $riskCT = Get-PnPContentType -Identity "Risk"
@@ -171,6 +162,7 @@ function new-M365Site {
             Write-Host "Unable to add Risk List to Site." -foregroundcolor yellow
         }
 
+        #Apply Risk Content Type to newly created Risk List
         try {
             Write-Host "Applying Risk Content type to Risk List..." -foregroundcolor yellow
             Add-PnPContentTypeToList -List "Risk" -ContentType "Risk" -DefaultContentType
@@ -180,6 +172,7 @@ function new-M365Site {
             Write-Host "Unable to apply content type Risk to Project Risk." -foregroundcolor yellow
         }
 
+        #Make Risk Content Type Fields Visible on Default List View
         try {
             Write-Host "Making Risk List Columns Visible" -foregroundcolor yellow
             $view = Set-PnPView -List "Risk" -Identity "All Items" -Fields "ID", "Title", "Condition", "Consequence", "Mitigation"
